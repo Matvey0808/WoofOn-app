@@ -1,12 +1,20 @@
 package com.woofon
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,20 +27,26 @@ import androidx.compose.material.icons.filled.SettingsRemote
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +74,12 @@ fun NavPage(
     )
     val isSelectHome by viewModelHome.isSelect.collectAsState()
     val isSelectSSH by viewModelSSH.isSelect.collectAsState()
+    var isFabExpanded by remember { mutableStateOf(false) }
+    val fabRotation by animateFloatAsState(
+        targetValue = if (isFabExpanded) 45f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "fabRotation"
+    )
 
     Scaffold(
         topBar = {
@@ -127,7 +147,7 @@ fun NavPage(
                                     viewModelHome.listDevices.value.singleOrNull()
                                         ?.let(viewModelHome::editDeviceCard)
                                     viewModelSSH.listDevices.value.singleOrNull()
-                                        ?.let (viewModelSSH::editSSHCard)
+                                        ?.let(viewModelSSH::editSSHCard)
                                 },
                                 enabled = viewModelHome.listDevices.collectAsState().value.size == 1 || viewModelSSH.listDevices.collectAsState().value.size == 1
                             ) {
@@ -167,7 +187,7 @@ fun NavPage(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
             ) {
                 NavigationBarItem(
                     selected = selected == Pages.WOL,
@@ -184,26 +204,90 @@ fun NavPage(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                {
-                    if (id == 0) {
-                        viewModelHome.toggleDialog()
-                    } else if (id == 1) {
-                        viewModelSSH.toggleDialog("add", viewModelSSH.currentId.value)
+            Column(horizontalAlignment = Alignment.End) {
+                AnimatedVisibility(
+                    visible = isFabExpanded,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    SmallFloatingActionButton(
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        ),
+                        onClick = {
+                            isFabExpanded = false
+                            if (id == 0) {
+                                viewModelHome.toggleDialog()
+                            } else if (id == 1) {
+                                viewModelSSH.toggleDialog("add", viewModelSSH.currentId.value)
+                            }
+                        },
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Devices,
+                            contentDescription = "Add device"
+                        )
                     }
-                },
-                containerColor = MaterialTheme.colorScheme.surface,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add"
-                )
+                }
+                AnimatedVisibility(
+                    visible = isFabExpanded,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    SmallFloatingActionButton(
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        ),
+                        onClick = {
+                            isFabExpanded = false
+                            toContent()
+                        },
+                        modifier = Modifier.padding(bottom = 16.dp),
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Key,
+                            contentDescription = "Keys"
+                        )
+                    }
+                }
+                FloatingActionButton(
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp,
+                        focusedElevation = 0.dp,
+                        hoveredElevation = 0.dp
+                    ),
+                    onClick = { isFabExpanded = !isFabExpanded },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add",
+                        modifier = Modifier.rotate(fabRotation)
+                    )
+                }
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            pages[id]()
+        AnimatedContent(
+            targetState = id,
+            modifier = Modifier.padding(innerPadding),
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 300)) togetherWith
+                        fadeOut(animationSpec = tween(durationMillis = 300))
+            },
+            label = "pageFade"
+        ) { page ->
+            pages[page]()
         }
     }
 }
